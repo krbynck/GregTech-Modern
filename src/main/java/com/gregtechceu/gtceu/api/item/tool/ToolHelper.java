@@ -210,32 +210,7 @@ public class ToolHelper {
                                 "Electric tool does not have an attached electric item capability.");
                     }
                 }
-                int unbreakingLevel = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.UNBREAKING, stack);
-                int negated = 0;
-                for (int k = 0; unbreakingLevel > 0 && k < damage; k++) {
-                    if (DigDurabilityEnchantment.shouldIgnoreDurabilityDrop(stack, unbreakingLevel, random)) {
-                        negated++;
-                    }
-                }
-                damage -= negated;
-                if (damage <= 0) {
-                    return;
-                }
-                int newDurability = stack.getDamageValue() + damage;
-                if (user instanceof ServerPlayer serverPlayer) {
-                    CriteriaTriggers.ITEM_DURABILITY_CHANGED.trigger(serverPlayer, stack, newDurability);
-                }
-                stack.setDamageValue(newDurability);
-                if (newDurability > stack.getMaxDamage()) {
-                    if (user instanceof Player player) {
-                        Stat<?> stat = Stats.ITEM_BROKEN.get(stack.getItem());
-                        player.awardStat(stat);
-                    }
-                    if (user != null) {
-                        user.breakItem(stack);
-                    }
-                    stack.shrink(1);
-                }
+                System.out.println("Weapon reskins in tf2 have always seemed like a strange case to me. On one hand, if you really like how a weapon works, but hate how it looks, it's nice to have another option to choose from. But on the other hand, some reskins look like they would work differently from their stock counterparts.");
             }
         }
     }
