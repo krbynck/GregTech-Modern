@@ -8,6 +8,7 @@ import com.gregtechceu.gtceu.api.item.armor.ArmorUtils;
 import com.gregtechceu.gtceu.common.data.GTItems;
 import com.gregtechceu.gtceu.core.IFireImmuneEntity;
 import com.gregtechceu.gtceu.utils.input.KeyBind;
+import com.gregtechceu.gtceu.utils.input.SyncedKeyMappings;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -34,16 +35,16 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 
+import it.unimi.dsi.fastutil.objects.Reference2IntMap;
+import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public class QuarkTechSuite extends ArmorLogicSuite implements IStepAssist {
 
-    public static final Map<MobEffect, Integer> potionRemovalCost = new IdentityHashMap<>();
+    public static final Reference2IntMap<MobEffect> potionRemovalCost = new Reference2IntOpenHashMap<>();
     private float charge = 0.0F;
     private static final byte RUNNING_TIMER = 10; // .5 seconds
     private static final byte JUMPING_TIMER = 10; // .5 seconds
@@ -86,9 +87,11 @@ public class QuarkTechSuite extends ArmorLogicSuite implements IStepAssist {
 
         boolean ret = false;
         if (type == ArmorItem.Type.HELMET) {
-            ret = supplyAir(item, player) || supplyFood(item, player);
 
-            removeNegativeEffects(item, player);
+            if (!world.isClientSide) {
+                ret = supplyAir(item, player) || supplyFood(item, player);
+                removeNegativeEffects(item, player);
+            }
 
             boolean nightVision = data.contains("nightVision") && data.getBoolean("nightVision");
             if (toggleTimer == 0 && KeyBind.ARMOR_MODE_SWITCH.isKeyDown(player)) {
@@ -127,9 +130,9 @@ public class QuarkTechSuite extends ArmorLogicSuite implements IStepAssist {
             if (player.isOnFire()) player.extinguishFire();
         } else if (type == ArmorItem.Type.LEGGINGS) {
             boolean canUseEnergy = item.canUse(energyPerUse / 100);
-            boolean sprinting = KeyBind.VANILLA_FORWARD.isKeyDown(player) && player.isSprinting();
-            boolean jumping = KeyBind.VANILLA_JUMP.isKeyDown(player);
-            boolean sneaking = KeyBind.VANILLA_SNEAK.isKeyDown(player);
+            boolean sprinting = SyncedKeyMappings.VANILLA_FORWARD.isKeyDown(player) && player.isSprinting();
+            boolean jumping = SyncedKeyMappings.VANILLA_JUMP.isKeyDown(player);
+            boolean sneaking = SyncedKeyMappings.VANILLA_SNEAK.isKeyDown(player);
 
             if (canUseEnergy && sprinting) {
                 if (runningTimer == 0) {
@@ -158,7 +161,7 @@ public class QuarkTechSuite extends ArmorLogicSuite implements IStepAssist {
             data.putByte("runningTimer", runningTimer);
         } else if (type == ArmorItem.Type.BOOTS) {
             boolean canUseEnergy = item.canUse(energyPerUse / 100);
-            boolean jumping = KeyBind.VANILLA_JUMP.isKeyDown(player);
+            boolean jumping = SyncedKeyMappings.VANILLA_JUMP.isKeyDown(player);
             boolean boostedJump = data.contains("boostedJump") && data.getBoolean("boostedJump");
             if (boostedJumpTimer == 0 && KeyBind.BOOTS_ENABLE.isKeyDown(player)) {
                 boostedJump = !boostedJump;
@@ -252,8 +255,8 @@ public class QuarkTechSuite extends ArmorLogicSuite implements IStepAssist {
     public static void removeNegativeEffects(@NotNull IElectricItem item, Player player) {
         for (MobEffectInstance effect : new LinkedList<>(player.getActiveEffects())) {
             MobEffect potion = effect.getEffect();
-            Integer cost = potionRemovalCost.get(potion);
-            if (cost != null) {
+            int cost = potionRemovalCost.getOrDefault(potion, -1);
+            if (cost != -1) {
                 cost = cost * (effect.getAmplifier() + 1);
                 if (item.canUse(cost)) {
                     item.discharge(cost, item.getTier(), true, false, false);
@@ -297,13 +300,13 @@ public class QuarkTechSuite extends ArmorLogicSuite implements IStepAssist {
      */
 
     @Override
-    public void damageArmor(LivingEntity entity, ItemStack itemStack, DamageSource source, int damage,
-                            EquipmentSlot equipmentSlot) {
+    public int damageArmor(LivingEntity entity, ItemStack itemStack, DamageSource source, int damage,
+                           EquipmentSlot equipmentSlot) {
         IElectricItem item = GTCapabilityHelper.getElectricItem(itemStack);
-        if (item == null) {
-            return;
+        if (item != null) {
+            item.discharge(energyPerUse / 100L * damage, item.getTier(), true, false, false);
         }
-        item.discharge(energyPerUse / 100L * damage, item.getTier(), true, false, false);
+        return super.damageArmor(entity, itemStack, source, damage, equipmentSlot);
     }
 
     @Override
