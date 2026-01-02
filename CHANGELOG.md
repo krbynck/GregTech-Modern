@@ -1,5 +1,6 @@
 # ChangeLog
 
+- no changes
 ## Version [v7.4.0](https://github.com/GregTechCEu/GregTech-Modern/compare/v7.3.0-1.20.1...v7.4.0-1.20.1)
 ### Added
 
