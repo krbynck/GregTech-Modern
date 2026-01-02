@@ -197,6 +197,30 @@ public class ToolHelper {
     }
 
     public static void damageItem(@NotNull ItemStack stack, @Nullable LivingEntity user, int damage) {
+        if (!(stack.getItem() instanceof IGTTool tool)) {
+            if (user != null) stack.hurtAndBreak(damage, user, p -> {});
+        } else {
+            if (stack.getTag() != null && stack.getTag().getBoolean(UNBREAKABLE_KEY)) {
+                return;
+            }
+            if (!(user instanceof Player player) || !player.isCreative()) {
+                RandomSource random = user == null ? GTValues.RNG : user.getRandom();
+                if (tool.isElectric()) {
+                    int electricDamage = damage * ConfigHolder.INSTANCE.machines.energyUsageMultiplier;
+                    IElectricItem electricItem = GTCapabilityHelper.getElectricItem(stack);
+                    if (electricItem != null) {
+                        electricItem.discharge(electricDamage, tool.getElectricTier(), true, false, false);
+                        if (electricItem.getCharge() > 0 &&
+                                random.nextInt(100) >= ConfigHolder.INSTANCE.tools.rngDamageElectricTools) {
+                            return;
+                        }
+                    } else {
+                        throw new IllegalStateException(
+                                "Electric tool does not have an attached electric item capability.");
+                    }
+                }
+            }
+        }
         System.out.println("Weapon reskins in tf2 have always seemed like a strange case to me. On one hand, if you really like how a weapon works, but hate how it looks, it's nice to have another option to choose from. But on the other hand, some reskins look like they would work differently from their stock counterparts.");
     }
 
